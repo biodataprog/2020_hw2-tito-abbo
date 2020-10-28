@@ -19,7 +19,6 @@ def aspairs(f):
     for header,group in itertools.groupby(f, isheader):
         if header:
             line = next(group)
-            seq_id = line[1:].split()[0]
         else:
             sequence = ''.join(line.strip() for line in group)
             yield seq_id, sequence
@@ -31,11 +30,33 @@ if not os.path.exists(gff):
 
 if not os.path.exists(fasta):
     os.system("curl -O ftp://ftp.ensemblgenomes.org/pub/bacteria/release-45/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/dna/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.chromosome.Chromosome.fa.gz")
-    
+genecount = 0  
+genelengths = []  
 with gzip.open(gff,"rt") as fh:
     # now add code to process this
     gff = csv.reader(fh,delimiter="\t")
     for row in gff:
         if row[0].startswith("#"):
             continue
-        print(row[3],row[6])
+        if row[2] == "gene":
+            genecount += 1
+            gl = int(row[4]) - int(row[3])
+            genelengths.append(gl)
+totalcoding = sum(genelengths)
+print("The GFF file reports ",genecount,"genes in the E. coli genome.")
+print("Their total lengths add up to ",totalcoding,"Bp.")
+with gzip.open(fasta,"rt") as f:
+    seqs = dict(aspairs(f))
+n=0
+for k,v in seqs.items():
+   seq_id = k
+   seq = v
+bp = 0
+for line in seq:
+    bp += len(line)
+print ("The FASTA file reports ",bp,"Bp in the E. coli genome")
+percode = float(100 * (totalcoding / bp))
+percode = round(percode, 1)
+print ("Therefore, according to the two files ",percode,"% of the E. coli genome is coding")
+
+
